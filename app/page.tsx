@@ -1,103 +1,263 @@
-import Image from "next/image";
+"use client";
+
+import React, { useMemo } from "react";
+import {
+  manufacturersArticle,
+  windDrivenRainArticle,
+  standardBladeArticle,
+  materialsArticle,
+  allArticles,
+  mockOverallData
+} from "../data/mockData";
+import { UserDisposition } from "../types";
+import Article from "../components/Article";
+
+type StatusCounts = {
+  fulfilled: number;
+  bookmarked: number;
+  notCompliant: number;
+  notApplicable: number;
+  total: number;
+  totalDispositioned: number;
+};
+
+function computeGlobalCounts(): StatusCounts {
+  const counts: StatusCounts = {
+    fulfilled: 0,
+    bookmarked: 0,
+    notCompliant: 0,
+    notApplicable: 0,
+    total: 0,
+    totalDispositioned: 0
+  };
+  allArticles.forEach(article => {
+    article.requirements.forEach(req => {
+      req.productReviews.forEach(review => {
+        counts.total++;
+        switch (review.userReview.status) {
+          case UserDisposition.FULFILLED:
+            counts.fulfilled++;
+            break;
+          case UserDisposition.BOOKMARKED:
+            counts.bookmarked++;
+            break;
+          case UserDisposition.NOT_COMPLIANT:
+            counts.notCompliant++;
+            break;
+          case UserDisposition.NOT_APPLICABLE:
+            counts.notApplicable++;
+            break;
+        }
+      });
+    });
+  });
+  counts.totalDispositioned =
+    counts.fulfilled +
+    counts.bookmarked +
+    counts.notCompliant +
+    counts.notApplicable;
+  return counts;
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const globalCounts = useMemo(() => computeGlobalCounts(), []);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Thin header bar to match app chrome */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">
+              {mockOverallData.projectTitle}
+            </h1>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Top row copied from SummaryAnalysisSummary formatting */}
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-4">
+          <div className="flex-shrink-0">
+            <h2 className="text-xl font-bold text-black mb-1">
+              {mockOverallData.projectTitle}
+            </h2>
+          </div>
+          <div className="bg-blue-50 rounded-xl px-3 py-2 shadow-sm border border-black/5 flex-shrink-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="w-64">
+                <div className="flex justify-between items-center mb-2.5">
+                  <span className="text-[13px] font-semibold text-black leading-[18px] tracking-[-0.08px]">
+                    Review Progress
+                  </span>
+                  <span className="text-[11px] font-semibold text-black/70 leading-[13px] tracking-[0.07px]">
+                    {globalCounts.totalDispositioned}/{globalCounts.total}
+                  </span>
+                </div>
+                <div className="w-64 bg-black/8 rounded-lg h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-2xl shadow-inner"
+                    style={{
+                      width: `${
+                        (globalCounts.totalDispositioned / globalCounts.total) *
+                        100
+                      }%`
+                    }}
+                  ></div>
+                </div>
+              </div>
+              <button className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-[13px] leading-[18px] tracking-[-0.08px] transition-colors duration-200 whitespace-nowrap">
+                Resume
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Two-column area */}
+        <div className="flex flex-col lg:flex-row gap-3 mb-4">
+          {/* Left card: Spec + Submittal */}
+          <div className="flex-1 min-w-0 bg-white border border-black/4 rounded-xl shadow-sm">
+            <div className="p-3">
+              <div className="mb-2">
+                <h3 className="text-[17px] font-semibold text-black leading-[22px] tracking-[-0.41px] mb-px">
+                  Spec Summary
+                </h3>
+                <div className="text-[12px] text-black/40 leading-[16px] truncate">
+                  {mockOverallData.specSummary.fileName}
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2 border border-black/4">
+                <div className="text-[13px] text-black/80 leading-[18px] tracking-[-0.08px] space-y-2">
+                  <p>{mockOverallData.specSummary.description}</p>
+                  <p>{mockOverallData.specSummary.productsDescription}</p>
+                </div>
+              </div>
+            </div>
+            <div className="h-px bg-black/8"></div>
+            <div className="p-3">
+              <div className="mb-2">
+                <h3 className="text-[17px] font-semibold text-black leading-[22px] tracking-[-0.41px] mb-px">
+                  Submittal Summary
+                </h3>
+                <div className="text-[12px] text-black/40 leading-[16px] truncate">
+                  {mockOverallData.submittalSummary.fileName}
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2 border border-black/4">
+                <div className="text-[13px] text-black/80 leading-[18px] tracking-[-0.08px] space-y-2">
+                  <p>{mockOverallData.submittalSummary.description}</p>
+                  <p>{mockOverallData.submittalSummary.subcontractor}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right card: tiles + assessment */}
+          <div className="flex-1 min-w-0 bg-white border border-black/4 rounded-xl shadow-sm">
+            <div className="p-3">
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="bg-green-50 rounded-lg px-2 py-1 h-[34px] flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-green-700">
+                    Fulfilled
+                  </span>
+                  <div className="bg-white rounded-full border border-black/4 min-w-[17px] px-1 py-0.5 text-center">
+                    <span className="text-[11px] font-semibold text-green-700">
+                      {globalCounts.fulfilled}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-gray-100 rounded-lg px-2 py-1 h-[34px] flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-gray-700">
+                    Not Applicable
+                  </span>
+                  <div className="bg-white rounded-full border border-black/4 min-w-[17px] px-1 py-0.5 text-center">
+                    <span className="text-[11px] font-semibold text-gray-700">
+                      {globalCounts.notApplicable}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-red-50 rounded-lg px-2 py-1 h-[34px] flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-red-600">
+                    Non-Compliant
+                  </span>
+                  <div className="bg-white rounded-full border border-black/4 min-w-[17px] px-1 py-0.5 text-center">
+                    <span className="text-[11px] font-semibold text-red-600">
+                      {globalCounts.notCompliant}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-orange-50 rounded-lg px-2 py-1 h-[34px] flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-orange-700">
+                    Bookmarked
+                  </span>
+                  <div className="bg-white rounded-full border border-black/4 min-w-[17px] px-1 py-0.5 text-center">
+                    <span className="text-[11px] font-semibold text-orange-700">
+                      {globalCounts.bookmarked}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="h-px bg-black/8"></div>
+            <div className="bg-white p-3">
+              <div className="mb-2">
+                <div className="flex items-center gap-1">
+                  <h3 className="text-[17px] font-semibold text-black leading-[22px] tracking-[-0.41px]">
+                    Bixby Assessment
+                  </h3>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg border border-black/4">
+                <div className="p-2">
+                  <div className="space-y-3">
+                    {mockOverallData.bixbyAssessment.details.map((d, i) => (
+                      <p
+                        key={i}
+                        className="text-[13px] text-black/80 leading-[1.8] pl-1"
+                      >
+                        {d}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Products section */}
+        <div className="mt-4">
+          <h2 className="text-xl font-bold text-black leading-[25px] tracking-[-0.4px] mb-3">
+            Part 2 - Products
+          </h2>
+          <div className="space-y-2">
+            <Article
+              article={manufacturersArticle}
+              productCount={2}
+              reviewed={0}
+              total={1}
+            />
+            <Article
+              article={windDrivenRainArticle}
+              productCount={1}
+              reviewed={4}
+              total={17}
+            />
+            <Article
+              article={standardBladeArticle}
+              productCount={1}
+              reviewed={0}
+              total={17}
+            />
+            <Article
+              article={materialsArticle}
+              productCount={2}
+              reviewed={0}
+              total={5}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
