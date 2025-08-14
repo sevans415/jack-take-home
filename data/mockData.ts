@@ -651,8 +651,8 @@ export const materialsArticle: Article = {
           }
         },
         {
-          id: "2.4.A.1-1",
-          productId: windLouverProduct.id,
+          id: "2.4.A.1-2",
+          productId: standardBladeProduct.id,
           bixbyReview: {
             status: BixbyPOVDisposition.UNCLEAR,
             explanation:
@@ -686,8 +686,8 @@ export const materialsArticle: Article = {
           }
         },
         {
-          id: "2.4.A.2-1",
-          productId: windLouverProduct.id,
+          id: "2.4.A.2-2",
+          productId: standardBladeProduct.id,
           bixbyReview: {
             status: BixbyPOVDisposition.UNCLEAR,
             explanation:
