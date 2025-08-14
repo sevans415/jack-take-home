@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   manufacturersArticle,
   windDrivenRainArticle,
   standardBladeArticle,
   materialsArticle,
   allArticles,
-  mockOverallData
+  mockOverallData,
 } from "../data/mockData";
 import { UserDisposition } from "../types";
 import Article from "../components/Article";
+import EmailDrawer from "../components/EmailDrawer";
+import { Mail } from "lucide-react";
 
 type StatusCounts = {
   fulfilled: number;
@@ -28,11 +30,11 @@ function computeGlobalCounts(): StatusCounts {
     notCompliant: 0,
     notApplicable: 0,
     total: 0,
-    totalDispositioned: 0
+    totalDispositioned: 0,
   };
-  allArticles.forEach(article => {
-    article.requirements.forEach(req => {
-      req.productReviews.forEach(review => {
+  allArticles.forEach((article) => {
+    article.requirements.forEach((req) => {
+      req.productReviews.forEach((review) => {
         counts.total++;
         switch (review.userReview.status) {
           case UserDisposition.FULFILLED:
@@ -61,6 +63,27 @@ function computeGlobalCounts(): StatusCounts {
 
 export default function Home() {
   const globalCounts = useMemo(() => computeGlobalCounts(), []);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Calculate total issues for badge
+  const totalIssues = useMemo(() => {
+    let count = 0;
+    allArticles.forEach((article) => {
+      article.requirements.forEach((req) => {
+        req.productReviews.forEach((review) => {
+          if (
+            review.bixbyReview.status === "UNCLEAR" ||
+            review.bixbyReview.status === "NOT_COMPLIANT" ||
+            review.userReview.status === UserDisposition.BOOKMARKED ||
+            review.userReview.status === UserDisposition.NOT_COMPLIANT
+          ) {
+            count++;
+          }
+        });
+      });
+    });
+    return count;
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,7 +124,7 @@ export default function Home() {
                       width: `${
                         (globalCounts.totalDispositioned / globalCounts.total) *
                         100
-                      }%`
+                      }%`,
                     }}
                   ></div>
                 </div>
@@ -258,6 +281,28 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setIsDrawerOpen(true)}
+        className="fixed bottom-6 right-6 bg-blue-500 text-white rounded-xl px-4 py-3 shadow-lg hover:bg-blue-600 flex items-center gap-2 transition-colors border border-black/4"
+      >
+        <Mail className="w-5 h-5" />
+        <span className="text-[13px] font-semibold leading-[18px] tracking-[-0.08px]">
+          Compose AI Email
+        </span>
+        {totalIssues > 0 && (
+          <span className="bg-red-500 text-white rounded-full px-2 py-0.5 text-[11px] font-bold ml-1">
+            {totalIssues}
+          </span>
+        )}
+      </button>
+
+      {/* Email Drawer */}
+      <EmailDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </div>
   );
 }
