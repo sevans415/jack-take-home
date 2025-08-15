@@ -1,7 +1,18 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, Plus, X, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Plus,
+  X,
+  ChevronDown,
+  ChevronRight,
+  Filter,
+  Bookmark,
+  AlertCircle,
+  Clock,
+  Check,
+} from "lucide-react";
 import { allArticles } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { Article, BixbyPOVDisposition, UserDisposition } from "@/types";
@@ -24,6 +35,32 @@ interface AddItemsPanelProps {
   addedItems: EmailItem[];
 }
 
+type FilterType = "bookmarked" | "non-compliant" | "not-reviewed";
+
+interface FilterOption {
+  value: FilterType;
+  label: string;
+  icon?: React.ReactNode;
+}
+
+const filterOptions: FilterOption[] = [
+  {
+    value: "bookmarked",
+    label: "Bookmarked",
+    icon: <Bookmark className="h-3.5 w-3.5" />,
+  },
+  {
+    value: "non-compliant",
+    label: "Non-Compliant",
+    icon: <AlertCircle className="h-3.5 w-3.5" />,
+  },
+  {
+    value: "not-reviewed",
+    label: "Not Reviewed",
+    icon: <Clock className="h-3.5 w-3.5" />,
+  },
+];
+
 export default function AddItemsPanel({
   isOpen,
   onClose,
@@ -34,6 +71,10 @@ export default function AddItemsPanel({
   const [expandedArticles, setExpandedArticles] = useState<Set<string>>(
     new Set()
   );
+  const [activeFilters, setActiveFilters] = useState<Set<FilterType>>(
+    new Set(["bookmarked", "non-compliant", "not-reviewed"])
+  );
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   // Process all articles into a flat list of items
   const allItems = useMemo(() => {
@@ -80,21 +121,48 @@ export default function AddItemsPanel({
     return items;
   }, []);
 
+  // Apply filter based on active filter types
+  const filteredByType = useMemo(() => {
+    if (activeFilters.size === 0) {
+      return [];
+    }
+
+    return allItems.filter((item) => {
+      if (
+        activeFilters.has("bookmarked") &&
+        item.userStatus === UserDisposition.BOOKMARKED
+      ) {
+        return true;
+      }
+      if (
+        activeFilters.has("non-compliant") &&
+        (item.userStatus === UserDisposition.NOT_COMPLIANT ||
+          item.status === BixbyPOVDisposition.NOT_COMPLIANT)
+      ) {
+        return true;
+      }
+      if (activeFilters.has("not-reviewed") && item.userStatus === null) {
+        return true;
+      }
+      return false;
+    });
+  }, [allItems, activeFilters]);
+
   // Filter items based on search query
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) {
-      return allItems;
+      return filteredByType;
     }
 
     const query = searchQuery.toLowerCase();
-    return allItems.filter(
+    return filteredByType.filter(
       (item) =>
         item.articleName.toLowerCase().includes(query) ||
         item.requirement.toLowerCase().includes(query) ||
         item.productName.toLowerCase().includes(query) ||
         item.note.toLowerCase().includes(query)
     );
-  }, [allItems, searchQuery]);
+  }, [filteredByType, searchQuery]);
 
   // Group items by article
   const groupedItems = useMemo(() => {
@@ -127,97 +195,257 @@ export default function AddItemsPanel({
     return addedItems.some((item) => item.id === itemId);
   };
 
-  const getStatusColor = (status: BixbyPOVDisposition) => {
-    switch (status) {
-      case BixbyPOVDisposition.COMPLIANT:
-        return "bg-green-100 text-green-700";
-      case BixbyPOVDisposition.NOT_COMPLIANT:
-        return "bg-red-100 text-red-700";
-      case BixbyPOVDisposition.UNCLEAR:
-        return "bg-yellow-100 text-yellow-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
-
-  const getUserStatusIcon = (status: UserDisposition | null) => {
-    if (!status) return null;
+  const getUserStatusLabel = (status: UserDisposition | null) => {
+    if (!status) return "Not Reviewed";
 
     switch (status) {
       case UserDisposition.FULFILLED:
-        return "✓";
+        return "Fulfilled";
       case UserDisposition.BOOKMARKED:
-        return "🔖";
+        return "Bookmarked";
       case UserDisposition.NOT_COMPLIANT:
-        return "✗";
+        return "Non-Compliant";
       case UserDisposition.NOT_APPLICABLE:
-        return "N/A";
+        return "Not Applicable";
       default:
         return null;
     }
   };
 
+  const getUserStatusColor = (status: UserDisposition | null) => {
+    if (!status) return "text-gray-600";
+
+    switch (status) {
+      case UserDisposition.FULFILLED:
+        return "text-green-600";
+      case UserDisposition.BOOKMARKED:
+        return "text-orange-700";
+      case UserDisposition.NOT_COMPLIANT:
+        return "text-red-600";
+      case UserDisposition.NOT_APPLICABLE:
+        return "text-gray-600";
+      default:
+        return "text-gray-600";
+    }
+  };
+
+  // Get counts for each filter
+  const filterCounts = useMemo(() => {
+    return {
+      bookmarked: allItems.filter(
+        (item) => item.userStatus === UserDisposition.BOOKMARKED
+      ).length,
+      "non-compliant": allItems.filter(
+        (item) =>
+          item.userStatus === UserDisposition.NOT_COMPLIANT ||
+          item.status === BixbyPOVDisposition.NOT_COMPLIANT
+      ).length,
+      "not-reviewed": allItems.filter((item) => item.userStatus === null)
+        .length,
+    };
+  }, [allItems]);
+
+  const toggleFilter = (filterType: FilterType) => {
+    const newFilters = new Set(activeFilters);
+    if (newFilters.has(filterType)) {
+      newFilters.delete(filterType);
+    } else {
+      newFilters.add(filterType);
+    }
+    setActiveFilters(newFilters);
+  };
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".filter-dropdown-container")) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    if (showFilterDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showFilterDropdown]);
+
   return (
-    <div className="h-full flex flex-col bg-white rounded-lg">
+    <div className="h-full flex flex-col bg-white rounded-lg border border-gray-200 shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-t-lg">
-        <h3 className="text-sm font-semibold">Project Items</h3>
-        <span className="text-xs text-gray-500">
-          {addedItems.length} selected
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-900">Available Items</h3>
+        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+          {filteredItems.length} items
         </span>
       </div>
 
-      {/* Search Bar */}
-      <div className="px-4 py-3 border-b bg-white">
-        <div className="relative">
+      {/* Search Bar with integrated Filter */}
+      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <div className="relative filter-dropdown-container">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search items..."
-            className="w-full pl-9 pr-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:border-blue-500 bg-white"
+            className="w-full pl-9 pr-9 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white transition-all"
           />
+
+          {/* Filter button inside search bar */}
+          <button
+            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+            className={cn(
+              "absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 rounded-md transition-all",
+              showFilterDropdown
+                ? "bg-blue-100 text-blue-600"
+                : "hover:bg-gray-100 text-gray-400 hover:text-gray-600",
+              activeFilters.size < filterOptions.length &&
+                !showFilterDropdown &&
+                "text-blue-600"
+            )}
+            title="Filter items"
+          >
+            <Filter className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Filter Dropdown */}
+          {showFilterDropdown && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10">
+              <div className="p-2 border-b">
+                <div className="text-xs font-medium text-gray-500 px-2">
+                  FILTER BY
+                </div>
+              </div>
+              {filterOptions.map((option) => {
+                const isSelected = activeFilters.has(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => toggleFilter(option.value)}
+                    className={cn(
+                      "w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center justify-between",
+                      isSelected && "bg-blue-50"
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      {option.icon && (
+                        <span className={cn("text-gray-500")}>
+                          {option.icon}
+                        </span>
+                      )}
+                      <span
+                        className={cn(
+                          isSelected ? " font-medium" : "text-gray-800"
+                        )}
+                      >
+                        {option.label}
+                      </span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "text-xs text-gray-500",
+                          isSelected ? " font-medium" : "text-gray-500"
+                        )}
+                      >
+                        {filterCounts[option.value]}
+                      </span>
+                      <div
+                        className={cn(
+                          "w-4 h-4 border rounded flex items-center justify-center",
+                          isSelected
+                            ? "bg-blue-600 border-blue-600"
+                            : "border-gray-300"
+                        )}
+                      >
+                        {isSelected && (
+                          <span className="text-white text-xs">✓</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+              {activeFilters.size < filterOptions.length && (
+                <div className="border-t p-2 hover:bg-gray-50 rounded-b-lg transition-colors cursor-pointer">
+                  <button
+                    onClick={() => {
+                      setActiveFilters(
+                        new Set(["bookmarked", "non-compliant", "not-reviewed"])
+                      );
+                      setShowFilterDropdown(false);
+                    }}
+                    className="flex flex-col items-center w-full text-xs text-blue-600 hover:text-blue-700 cursor-pointer"
+                  >
+                    Select all
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Items List */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 bg-white">
+      <div className="flex-1 overflow-y-auto px-4 py-3 bg-white rounded-lg">
         {groupedItems.length === 0 ? (
-          <p className="text-gray-500 text-center py-8 text-sm">
-            No items found
-          </p>
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+                <Search className="h-6 w-6 text-gray-300" />
+              </div>
+              <p className="text-sm font-medium text-gray-600">
+                {searchQuery
+                  ? "No items found"
+                  : activeFilters.size === 0
+                  ? "Select filters to see items"
+                  : "No items match your filters"}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {searchQuery
+                  ? "Try adjusting your search"
+                  : activeFilters.size === 0
+                  ? "Use the filter button above"
+                  : "Try different filter options"}
+              </p>
+            </div>
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {groupedItems.map(([articleNumber, items]) => {
               const isExpanded = expandedArticles.has(articleNumber);
               const articleName = items[0].articleName;
 
               return (
-                <div key={articleNumber} className="border rounded-lg bg-white">
+                <div
+                  key={articleNumber}
+                  className="border border-gray-200 rounded-lg bg-white overflow-hidden"
+                >
                   {/* Article Header */}
                   <button
                     onClick={() => toggleArticle(articleNumber)}
-                    className="w-full px-3 py-2 flex items-center justify-between hover:bg-gray-50 transition-colors rounded-t-lg"
+                    className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       {isExpanded ? (
-                        <ChevronDown className="h-3 w-3 text-gray-500 flex-shrink-0" />
+                        <ChevronDown className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
                       ) : (
-                        <ChevronRight className="h-3 w-3 text-gray-500 flex-shrink-0" />
+                        <ChevronRight className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
                       )}
-                      <span className="text-xs font-medium text-left line-clamp-1">
-                        {articleNumber} - {articleName}
+                      <span className="text-xs font-medium text-gray-900 text-left line-clamp-1">
+                        {articleName}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500 ml-1">
+                    <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full ml-2 flex-shrink-0">
                       {items.length}
                     </span>
                   </button>
 
                   {/* Article Items */}
                   {isExpanded && (
-                    <div className="border-t">
+                    <div className="border-t border-gray-100">
                       {items.map((item) => {
                         const added = isItemAdded(item.id);
 
@@ -225,24 +453,64 @@ export default function AddItemsPanel({
                           <div
                             key={item.id}
                             className={cn(
-                              "px-3 py-2.5 border-b last:border-b-0 transition-colors",
-                              added ? "bg-green-50" : "hover:bg-gray-50"
+                              "px-3 py-3 border-b border-gray-50 last:border-b-0 transition-all",
+                              "hover:bg-gray-50"
                             )}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                  <span
-                                    className={cn(
-                                      "text-xs px-1.5 py-0.5 rounded-full font-medium",
-                                      getStatusColor(item.status)
-                                    )}
-                                  >
-                                    {item.status}
-                                  </span>
+                                <div className="flex items-center gap-2 mb-1">
                                   {item.userStatus && (
-                                    <span className="text-xs">
-                                      {getUserStatusIcon(item.userStatus)}
+                                    <div className="flex items-center gap-1.5">
+                                      {item.userStatus ===
+                                        UserDisposition.BOOKMARKED && (
+                                        <Bookmark
+                                          className={cn(
+                                            "h-3.5 w-3.5",
+                                            "text-orange-700"
+                                          )}
+                                        />
+                                      )}
+                                      {item.userStatus ===
+                                        UserDisposition.NOT_COMPLIANT && (
+                                        <X
+                                          className={cn(
+                                            "h-3.5 w-3.5",
+                                            "text-red-600"
+                                          )}
+                                        />
+                                      )}
+                                      {item.userStatus ===
+                                        UserDisposition.FULFILLED && (
+                                        <Check
+                                          className={cn(
+                                            "h-3.5 w-3.5",
+                                            "text-green-600"
+                                          )}
+                                        />
+                                      )}
+                                      {item.userStatus ===
+                                        UserDisposition.NOT_APPLICABLE && (
+                                        <span className="text-xs font-medium text-gray-600">
+                                          NA
+                                        </span>
+                                      )}
+                                      {item.userStatus !==
+                                        UserDisposition.NOT_APPLICABLE && (
+                                        <span
+                                          className={cn(
+                                            "text-xs font-medium",
+                                            getUserStatusColor(item.userStatus)
+                                          )}
+                                        >
+                                          {getUserStatusLabel(item.userStatus)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {!item.userStatus && (
+                                    <span className="text-xs text-gray-500">
+                                      Not Reviewed
                                     </span>
                                   )}
                                 </div>
@@ -262,21 +530,21 @@ export default function AddItemsPanel({
                                 onClick={() => !added && onAddItem(item)}
                                 disabled={added}
                                 className={cn(
-                                  "flex items-center gap-0.5 px-2 py-1 rounded-md transition-colors flex-shrink-0 text-xs",
+                                  "flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all flex-shrink-0 text-xs font-medium border",
                                   added
-                                    ? "bg-green-100 text-green-700 cursor-not-allowed"
-                                    : "border hover:bg-blue-50 text-blue-600 hover:border-blue-300"
+                                    ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
+                                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
                                 )}
                               >
                                 {added ? (
                                   <>
                                     <span className="text-xs">✓</span>
-                                    <span className="font-medium">Added</span>
+                                    <span>Added</span>
                                   </>
                                 ) : (
                                   <>
                                     <Plus className="h-3 w-3" />
-                                    <span className="font-medium">Add</span>
+                                    <span>Add</span>
                                   </>
                                 )}
                               </button>

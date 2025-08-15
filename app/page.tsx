@@ -10,8 +10,8 @@ import {
   mockOverallData,
 } from "../data/mockData";
 import { UserDisposition } from "../types";
-import Article from "../components/Article";
-import EmailDrawer from "../components/EmailDrawer";
+import Article from "@/components/Article";
+import EmailDrawer from "@/components/EmailDrawer";
 import { Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -111,49 +111,41 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-gray-900">
                 {mockOverallData.projectTitle}
               </h1>
+              {/* Review Progress moved here */}
+              <div className="bg-blue-50 rounded-xl px-3 py-2 shadow-sm border border-black/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-64">
+                    <div className="flex justify-between items-center mb-2.5">
+                      <span className="text-[13px] font-semibold text-black leading-[18px] tracking-[-0.08px]">
+                        Review Progress
+                      </span>
+                      <span className="text-[11px] font-semibold text-black/70 leading-[13px] tracking-[0.07px]">
+                        {globalCounts.totalDispositioned}/{globalCounts.total}
+                      </span>
+                    </div>
+                    <div className="w-64 bg-black/8 rounded-lg h-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-2xl shadow-inner"
+                        style={{
+                          width: `${
+                            (globalCounts.totalDispositioned /
+                              globalCounts.total) *
+                            100
+                          }%`,
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  <button className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-[13px] leading-[18px] tracking-[-0.08px] transition-colors duration-200 whitespace-nowrap">
+                    Resume
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Top row copied from SummaryAnalysisSummary formatting */}
-          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-4">
-            <div className="flex-shrink-0">
-              <h2 className="text-xl font-bold text-black mb-1">
-                {mockOverallData.projectTitle}
-              </h2>
-            </div>
-            <div className="bg-blue-50 rounded-xl px-3 py-2 shadow-sm border border-black/5 flex-shrink-0">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="w-64">
-                  <div className="flex justify-between items-center mb-2.5">
-                    <span className="text-[13px] font-semibold text-black leading-[18px] tracking-[-0.08px]">
-                      Review Progress
-                    </span>
-                    <span className="text-[11px] font-semibold text-black/70 leading-[13px] tracking-[0.07px]">
-                      {globalCounts.totalDispositioned}/{globalCounts.total}
-                    </span>
-                  </div>
-                  <div className="w-64 bg-black/8 rounded-lg h-2">
-                    <div
-                      className="bg-blue-500 h-2 rounded-2xl shadow-inner"
-                      style={{
-                        width: `${
-                          (globalCounts.totalDispositioned /
-                            globalCounts.total) *
-                          100
-                        }%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-                <button className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-[13px] leading-[18px] tracking-[-0.08px] transition-colors duration-200 whitespace-nowrap">
-                  Resume
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Two-column area */}
           <div className="flex flex-col lg:flex-row gap-3 mb-4">
             {/* Left card: Spec + Submittal */}

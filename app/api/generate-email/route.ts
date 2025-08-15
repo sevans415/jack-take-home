@@ -8,6 +8,28 @@ export async function POST(request: NextRequest) {
     // Simulate a 3-second delay for LLM processing
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
+    // Generate subject based on the items
+    const hasNonCompliant = items.some(
+      (item: any) => item.status === "NOT_COMPLIANT"
+    );
+    const hasPartiallyCompliant = items.some(
+      (item: any) => item.status === "PARTIALLY_COMPLIANT"
+    );
+
+    let subject = "Review Required: ";
+    if (hasNonCompliant) {
+      subject += "Non-Compliant Items in Submittal";
+    } else if (hasPartiallyCompliant) {
+      subject += "Partially Compliant Items Need Attention";
+    } else {
+      subject += "Submittal Compliance Review";
+    }
+
+    // Add item count if multiple
+    if (items.length > 1) {
+      subject += ` (${items.length} items)`;
+    }
+
     // Generate sample email body text
     const emailBody = `Dear ${recipients.map((r: any) => r.name).join(", ")},
 
@@ -21,7 +43,7 @@ ${items
   .map(
     (item: any, index: number) => `
 ${index + 1}. ${item.productName}
-   Article: ${item.articleNumber} - ${item.articleName}
+   Article: ${item.articleName}
    Requirement: ${item.requirement}
    Status: ${item.status}
    ${item.note ? `Note: ${item.note}` : ""}
@@ -43,6 +65,7 @@ Best regards,
     return NextResponse.json({
       success: true,
       emailBody,
+      subject,
     });
   } catch (error) {
     console.error("Error generating email:", error);
