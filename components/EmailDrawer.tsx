@@ -58,11 +58,8 @@ export default function EmailDrawer({ isOpen, onClose }: EmailDrawerProps) {
 
   const handleAddItem = (item: EmailItem) => {
     setEmailItems([...emailItems, item]);
-    if (item.note && !itemNotes.has(item.id)) {
-      const newNotes = new Map(itemNotes);
-      newNotes.set(item.id, item.note);
-      setItemNotes(newNotes);
-    }
+    // Notes are now managed at the requirement level through the UI
+    // Individual product notes are preserved within item.products
   };
 
   const handleRemoveItem = (itemId: string) => {
@@ -85,7 +82,7 @@ export default function EmailDrawer({ isOpen, onClose }: EmailDrawerProps) {
     try {
       const itemsWithNotes = emailItems.map((item) => ({
         ...item,
-        note: itemNotes.get(item.id) || item.note || "",
+        note: itemNotes.get(item.id) || "",
       }));
 
       const response = await fetch("/api/generate-email", {

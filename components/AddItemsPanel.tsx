@@ -16,16 +16,26 @@ import {
 import { allArticles } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { Article, BixbyPOVDisposition, UserDisposition } from "@/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface EmailItem {
   id: string;
   articleName: string;
   articleNumber: string;
+  requirementId: string;
   requirement: string;
-  productName: string;
-  status: BixbyPOVDisposition;
-  userStatus: UserDisposition | null;
-  note: string;
+  products: {
+    productId: number;
+    productName: string;
+    reviewId: string;
+    status: BixbyPOVDisposition;
+    userStatus: UserDisposition | null;
+    note: string;
+  }[];
 }
 
 interface AddItemsPanelProps {
@@ -52,7 +62,7 @@ const filterOptions: FilterOption[] = [
   {
     value: "non-compliant",
     label: "Non-Compliant",
-    icon: <AlertCircle className="h-3.5 w-3.5" />,
+    icon: <X className="h-3.5 w-3.5" />,
   },
   {
     value: "not-reviewed",
@@ -76,45 +86,49 @@ export default function AddItemsPanel({
   );
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
-  // Process all articles into a flat list of items
+  // Process all articles into grouped requirements
   const allItems = useMemo(() => {
     const items: EmailItem[] = [];
-    const seenIds = new Set<string>();
+    const requirementMap = new Map<string, EmailItem>();
 
     allArticles.forEach((article) => {
       article.requirements.forEach((req) => {
-        req.productReviews.forEach((review) => {
-          // Filter out items that are fulfilled or not applicable
-          if (
-            review.userReview.status === UserDisposition.FULFILLED ||
-            review.userReview.status === UserDisposition.NOT_APPLICABLE
-          ) {
-            return; // Skip this item
-          }
+        const requirementKey = `${article.articleDetails.articleNumber}-${req.id}`;
 
-          // Deduplicate by review ID
-          if (seenIds.has(review.id)) {
-            return; // Skip duplicate
-          }
-          seenIds.add(review.id);
+        // Collect all products for this requirement that match our filter criteria
+        const relevantProducts = req.productReviews
+          .filter(
+            (review) =>
+              review.userReview.status !== UserDisposition.FULFILLED &&
+              review.userReview.status !== UserDisposition.NOT_APPLICABLE
+          )
+          .map((review) => {
+            const productName =
+              review.productId === 123
+                ? "EHH-501 Wind-Driven Rain Resistant Louver"
+                : "ESD-435 Standard Blade Louver";
 
-          // Get product name from the mock data
-          const productName =
-            review.productId === 123
-              ? "EHH-501 Wind-Driven Rain Resistant Louver"
-              : "ESD-435 Standard Blade Louver";
+            return {
+              productId: review.productId,
+              productName,
+              reviewId: review.id,
+              status: review.bixbyReview.status,
+              userStatus: review.userReview.status,
+              note: review.userReview.bookmarkNote || "",
+            };
+          });
 
+        // Only create an item if there are relevant products
+        if (relevantProducts.length > 0) {
           items.push({
-            id: review.id,
+            id: requirementKey,
             articleName: article.articleDetails.text,
             articleNumber: article.articleDetails.articleNumber,
+            requirementId: req.id,
             requirement: req.requirement.shortDescription,
-            productName: productName,
-            status: review.bixbyReview.status,
-            userStatus: review.userReview.status,
-            note: review.userReview.bookmarkNote || "",
+            products: relevantProducts,
           });
-        });
+        }
       });
     });
 
@@ -128,23 +142,26 @@ export default function AddItemsPanel({
     }
 
     return allItems.filter((item) => {
-      if (
-        activeFilters.has("bookmarked") &&
-        item.userStatus === UserDisposition.BOOKMARKED
-      ) {
-        return true;
-      }
-      if (
-        activeFilters.has("non-compliant") &&
-        (item.userStatus === UserDisposition.NOT_COMPLIANT ||
-          item.status === BixbyPOVDisposition.NOT_COMPLIANT)
-      ) {
-        return true;
-      }
-      if (activeFilters.has("not-reviewed") && item.userStatus === null) {
-        return true;
-      }
-      return false;
+      // Check if any product in this requirement matches the active filters
+      return item.products.some((product) => {
+        if (
+          activeFilters.has("bookmarked") &&
+          product.userStatus === UserDisposition.BOOKMARKED
+        ) {
+          return true;
+        }
+        if (
+          activeFilters.has("non-compliant") &&
+          (product.userStatus === UserDisposition.NOT_COMPLIANT ||
+            product.status === BixbyPOVDisposition.NOT_COMPLIANT)
+        ) {
+          return true;
+        }
+        if (activeFilters.has("not-reviewed") && product.userStatus === null) {
+          return true;
+        }
+        return false;
+      });
     });
   }, [allItems, activeFilters]);
 
@@ -159,8 +176,11 @@ export default function AddItemsPanel({
       (item) =>
         item.articleName.toLowerCase().includes(query) ||
         item.requirement.toLowerCase().includes(query) ||
-        item.productName.toLowerCase().includes(query) ||
-        item.note.toLowerCase().includes(query)
+        item.products.some(
+          (p) =>
+            p.productName.toLowerCase().includes(query) ||
+            p.note.toLowerCase().includes(query)
+        )
     );
   }, [filteredByType, searchQuery]);
 
@@ -231,17 +251,31 @@ export default function AddItemsPanel({
 
   // Get counts for each filter
   const filterCounts = useMemo(() => {
+    let bookmarked = 0;
+    let nonCompliant = 0;
+    let notReviewed = 0;
+
+    allItems.forEach((item) => {
+      item.products.forEach((product) => {
+        if (product.userStatus === UserDisposition.BOOKMARKED) {
+          bookmarked++;
+        }
+        if (
+          product.userStatus === UserDisposition.NOT_COMPLIANT ||
+          product.status === BixbyPOVDisposition.NOT_COMPLIANT
+        ) {
+          nonCompliant++;
+        }
+        if (product.userStatus === null) {
+          notReviewed++;
+        }
+      });
+    });
+
     return {
-      bookmarked: allItems.filter(
-        (item) => item.userStatus === UserDisposition.BOOKMARKED
-      ).length,
-      "non-compliant": allItems.filter(
-        (item) =>
-          item.userStatus === UserDisposition.NOT_COMPLIANT ||
-          item.status === BixbyPOVDisposition.NOT_COMPLIANT
-      ).length,
-      "not-reviewed": allItems.filter((item) => item.userStatus === null)
-        .length,
+      bookmarked,
+      "non-compliant": nonCompliant,
+      "not-reviewed": notReviewed,
     };
   }, [allItems]);
 
@@ -459,72 +493,65 @@ export default function AddItemsPanel({
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  {item.userStatus && (
-                                    <div className="flex items-center gap-1.5">
-                                      {item.userStatus ===
-                                        UserDisposition.BOOKMARKED && (
-                                        <Bookmark
-                                          className={cn(
-                                            "h-3.5 w-3.5",
-                                            "text-orange-700"
-                                          )}
-                                        />
-                                      )}
-                                      {item.userStatus ===
-                                        UserDisposition.NOT_COMPLIANT && (
-                                        <X
-                                          className={cn(
-                                            "h-3.5 w-3.5",
-                                            "text-red-600"
-                                          )}
-                                        />
-                                      )}
-                                      {item.userStatus ===
-                                        UserDisposition.FULFILLED && (
-                                        <Check
-                                          className={cn(
-                                            "h-3.5 w-3.5",
-                                            "text-green-600"
-                                          )}
-                                        />
-                                      )}
-                                      {item.userStatus ===
-                                        UserDisposition.NOT_APPLICABLE && (
-                                        <span className="text-xs font-medium text-gray-600">
-                                          NA
-                                        </span>
-                                      )}
-                                      {item.userStatus !==
-                                        UserDisposition.NOT_APPLICABLE && (
-                                        <span
-                                          className={cn(
-                                            "text-xs font-medium",
-                                            getUserStatusColor(item.userStatus)
-                                          )}
-                                        >
-                                          {getUserStatusLabel(item.userStatus)}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                  {!item.userStatus && (
-                                    <span className="text-xs text-gray-500">
-                                      Not Reviewed
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs font-medium text-gray-900 mb-0.5 line-clamp-1">
-                                  {item.productName}
-                                </p>
-                                <p className="text-xs text-gray-600 line-clamp-2">
+                                {/* Requirement */}
+                                <p className="text-xs font-medium text-gray-900 mb-2">
                                   {item.requirement}
                                 </p>
-                                {item.note && (
-                                  <p className="text-xs text-blue-600 italic mt-1">
-                                    Note: {item.note}
-                                  </p>
-                                )}
+
+                                {/* Products */}
+                                <div className="space-y-1.5">
+                                  {item.products.map((product, idx) => (
+                                    <div
+                                      key={product.reviewId}
+                                      className="flex items-start gap-2"
+                                    >
+                                      <div className="flex items-center gap-1 mt-0.5">
+                                        {product.userStatus ===
+                                          UserDisposition.BOOKMARKED && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Bookmark className="h-3 w-3 text-orange-700" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Bookmarked</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                        {product.userStatus ===
+                                          UserDisposition.NOT_COMPLIANT && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <X className="h-3 w-3 text-red-600" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Non-Compliant</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                        {!product.userStatus && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Clock className="h-3 w-3 text-gray-400" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Not Reviewed</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-xs text-gray-700">
+                                          {product.productName}
+                                        </p>
+                                        {product.note && (
+                                          <p className="text-xs text-blue-600 italic mt-0.5">
+                                            {product.note}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                               <button
                                 onClick={() => !added && onAddItem(item)}
