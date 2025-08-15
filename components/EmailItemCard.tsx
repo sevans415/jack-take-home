@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { X, Bookmark, Clock, Pencil } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { EmailItem } from "./AddItemsPanel";
 import { UserDisposition, BixbyPOVDisposition } from "@/types";
 import {

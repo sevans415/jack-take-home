@@ -9,13 +9,11 @@ import {
   ChevronRight,
   Filter,
   Bookmark,
-  AlertCircle,
   Clock,
-  Check,
 } from "lucide-react";
 import { allArticles } from "@/data/mockData";
 import { cn } from "@/lib/utils";
-import { Article, BixbyPOVDisposition, UserDisposition } from "@/types";
+import { BixbyPOVDisposition, UserDisposition } from "@/types";
 import {
   Tooltip,
   TooltipContent,
@@ -39,8 +37,6 @@ export interface EmailItem {
 }
 
 interface AddItemsPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
   onAddItem: (item: EmailItem) => void;
   addedItems: EmailItem[];
 }
@@ -72,8 +68,6 @@ const filterOptions: FilterOption[] = [
 ];
 
 export default function AddItemsPanel({
-  isOpen,
-  onClose,
   onAddItem,
   addedItems,
 }: AddItemsPanelProps) {
@@ -89,7 +83,6 @@ export default function AddItemsPanel({
   // Process all articles into grouped requirements
   const allItems = useMemo(() => {
     const items: EmailItem[] = [];
-    const requirementMap = new Map<string, EmailItem>();
 
     allArticles.forEach((article) => {
       article.requirements.forEach((req) => {
@@ -97,26 +90,37 @@ export default function AddItemsPanel({
 
         // Collect all products for this requirement that match our filter criteria
         const relevantProducts = req.productReviews
-          .filter(
-            (review) =>
-              review.userReview.status !== UserDisposition.FULFILLED &&
-              review.userReview.status !== UserDisposition.NOT_APPLICABLE
-          )
-          .map((review) => {
-            const productName =
-              review.productId === 123
-                ? "EHH-501 Wind-Driven Rain Resistant Louver"
-                : "ESD-435 Standard Blade Louver";
+          .filter((product) => {
+            // Check against our status filters
+            const userStatus = product.userReview.status;
+            const bixbyStatus = product.bixbyReview.status;
 
-            return {
-              productId: review.productId,
-              productName,
-              reviewId: review.id,
-              status: review.bixbyReview.status,
-              userStatus: review.userReview.status,
-              note: review.userReview.bookmarkNote || "",
-            };
-          });
+            if (
+              activeFilters.has("bookmarked") &&
+              userStatus === UserDisposition.BOOKMARKED
+            ) {
+              return true;
+            }
+            if (
+              activeFilters.has("non-compliant") &&
+              (userStatus === UserDisposition.NOT_COMPLIANT ||
+                bixbyStatus === BixbyPOVDisposition.NOT_COMPLIANT)
+            ) {
+              return true;
+            }
+            if (activeFilters.has("not-reviewed") && !userStatus) {
+              return true;
+            }
+            return false;
+          })
+          .map((product) => ({
+            productId: product.productId,
+            productName: article.articleDetails.text.split(" - ")[0],
+            reviewId: product.id,
+            status: product.bixbyReview.status,
+            userStatus: product.userReview.status,
+            note: product.userReview.bookmarkNote || "",
+          }));
 
         // Only create an item if there are relevant products
         if (relevantProducts.length > 0) {
@@ -133,55 +137,24 @@ export default function AddItemsPanel({
     });
 
     return items;
-  }, []);
-
-  // Apply filter based on active filter types
-  const filteredByType = useMemo(() => {
-    if (activeFilters.size === 0) {
-      return [];
-    }
-
-    return allItems.filter((item) => {
-      // Check if any product in this requirement matches the active filters
-      return item.products.some((product) => {
-        if (
-          activeFilters.has("bookmarked") &&
-          product.userStatus === UserDisposition.BOOKMARKED
-        ) {
-          return true;
-        }
-        if (
-          activeFilters.has("non-compliant") &&
-          product.userStatus === UserDisposition.NOT_COMPLIANT
-        ) {
-          return true;
-        }
-        if (activeFilters.has("not-reviewed") && product.userStatus === null) {
-          return true;
-        }
-        return false;
-      });
-    });
-  }, [allItems, activeFilters]);
+  }, [activeFilters]);
 
   // Filter items based on search query
   const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return filteredByType;
-    }
+    if (!searchQuery) return allItems;
 
-    const query = searchQuery.toLowerCase();
-    return filteredByType.filter(
-      (item) =>
-        item.articleName.toLowerCase().includes(query) ||
-        item.requirement.toLowerCase().includes(query) ||
-        item.products.some(
-          (p) =>
-            p.productName.toLowerCase().includes(query) ||
-            p.note.toLowerCase().includes(query)
+    const lowerQuery = searchQuery.toLowerCase();
+    return allItems.filter((item) => {
+      return (
+        item.requirement.toLowerCase().includes(lowerQuery) ||
+        item.articleName.toLowerCase().includes(lowerQuery) ||
+        item.articleNumber.toLowerCase().includes(lowerQuery) ||
+        item.products.some((p) =>
+          p.productName.toLowerCase().includes(lowerQuery)
         )
-    );
-  }, [filteredByType, searchQuery]);
+      );
+    });
+  }, [allItems, searchQuery]);
 
   // Group items by article
   const groupedItems = useMemo(() => {
@@ -212,40 +185,6 @@ export default function AddItemsPanel({
 
   const isItemAdded = (itemId: string) => {
     return addedItems.some((item) => item.id === itemId);
-  };
-
-  const getUserStatusLabel = (status: UserDisposition | null) => {
-    if (!status) return "Not Reviewed";
-
-    switch (status) {
-      case UserDisposition.FULFILLED:
-        return "Fulfilled";
-      case UserDisposition.BOOKMARKED:
-        return "Bookmarked";
-      case UserDisposition.NOT_COMPLIANT:
-        return "Non-Compliant";
-      case UserDisposition.NOT_APPLICABLE:
-        return "Not Applicable";
-      default:
-        return null;
-    }
-  };
-
-  const getUserStatusColor = (status: UserDisposition | null) => {
-    if (!status) return "text-gray-600";
-
-    switch (status) {
-      case UserDisposition.FULFILLED:
-        return "text-green-600";
-      case UserDisposition.BOOKMARKED:
-        return "text-orange-700";
-      case UserDisposition.NOT_COMPLIANT:
-        return "text-red-600";
-      case UserDisposition.NOT_APPLICABLE:
-        return "text-gray-600";
-      default:
-        return "text-gray-600";
-    }
   };
 
   // Get counts for each filter (counting items, not products)
@@ -498,7 +437,7 @@ export default function AddItemsPanel({
 
                                 {/* Products */}
                                 <div className="space-y-1.5">
-                                  {item.products.map((product, idx) => (
+                                  {item.products.map((product) => (
                                     <div
                                       key={product.reviewId}
                                       className="flex items-start gap-2"

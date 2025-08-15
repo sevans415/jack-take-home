@@ -1,10 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { BixbyPOVDisposition, UserDisposition } from "@/types";
+
+// Define types for the request body
+interface Recipient {
+  name: string;
+  email: string;
+}
+
+interface Product {
+  productId: number;
+  productName: string;
+  status: BixbyPOVDisposition;
+  explanation: string;
+  userStatus: UserDisposition | null;
+  note?: string;
+}
+
+interface Item {
+  articleNumber: string;
+  articleName: string;
+  requirement: string;
+  products: Product[];
+  note?: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { recipients, items } = body;
+    const { recipients, items }: { recipients: Recipient[]; items: Item[] } =
+      body;
 
     // Initialize Anthropic client
     const anthropic = new Anthropic({
@@ -12,8 +37,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Prepare context for the LLM
-    const recipientNames = recipients.map((r: any) => r.name).join(", ");
-    const recipientEmails = recipients.map((r: any) => r.email);
+    const recipientNames = recipients.map((r: Recipient) => r.name).join(", ");
+    const recipientEmails = recipients.map((r: Recipient) => r.email);
 
     // Determine the recipient type based on email domain or names
     let recipientType = "team member";
@@ -29,9 +54,9 @@ export async function POST(request: NextRequest) {
 
     // Build detailed context about each item
     const itemsContext = items
-      .map((item: any, index: number) => {
+      .map((item: Item, index: number) => {
         const products = item.products
-          .map((product: any) => {
+          .map((product: Product) => {
             let context = `Product: ${product.productName} (ID: ${product.productId})`;
             context += `\n     Bixby Status: ${product.status}`;
             context += `\n     Bixby Explanation: ${product.explanation}`;
@@ -53,17 +78,17 @@ export async function POST(request: NextRequest) {
       .join("\n\n");
 
     // Categorize items by status for better email organization
-    const nonCompliantItems = items.filter((item: any) =>
+    const nonCompliantItems = items.filter((item: Item) =>
       item.products.some(
-        (p: any) =>
+        (p: Product) =>
           p.status === "NOT_COMPLIANT" || p.userStatus === "not_compliant"
       )
     );
-    const bookmarkedItems = items.filter((item: any) =>
-      item.products.some((p: any) => p.userStatus === "bookmarked")
+    const bookmarkedItems = items.filter((item: Item) =>
+      item.products.some((p: Product) => p.userStatus === "bookmarked")
     );
-    const unclearItems = items.filter((item: any) =>
-      item.products.some((p: any) => p.status === "UNCLEAR")
+    const unclearItems = items.filter((item: Item) =>
+      item.products.some((p: Product) => p.status === "UNCLEAR")
     );
 
     // Create the prompt for Anthropic
@@ -171,17 +196,20 @@ Respond in JSON format with two fields:
     console.error("Error generating email:", error);
 
     // Fallback to a basic template if API fails
-    const { recipients, items } = await request.json();
+    const { recipients, items }: { recipients: Recipient[]; items: Item[] } =
+      await request.json();
 
-    const hasNonCompliant = items.some((item: any) =>
+    const hasNonCompliant = items.some((item: Item) =>
       item.products.some(
-        (product: any) =>
+        (product: Product) =>
           product.status === "NOT_COMPLIANT" ||
           product.userStatus === "not_compliant"
       )
     );
-    const hasBookmarked = items.some((item: any) =>
-      item.products.some((product: any) => product.userStatus === "bookmarked")
+    const hasBookmarked = items.some((item: Item) =>
+      item.products.some(
+        (product: Product) => product.userStatus === "bookmarked"
+      )
     );
 
     let subject = "Review Required: ";
@@ -197,7 +225,9 @@ Respond in JSON format with two fields:
       subject += ` (${items.length} requirements)`;
     }
 
-    const emailBody = `Dear ${recipients.map((r: any) => r.name).join(", ")},
+    const emailBody = `Dear ${recipients
+      .map((r: Recipient) => r.name)
+      .join(", ")},
 
 I hope this email finds you well. I am writing to bring to your attention several requirements that need review and clarification regarding our Fixed Louvers submittal.
 
@@ -206,10 +236,10 @@ After careful review of the specifications and submitted materials, we have iden
     } requirement${items.length !== 1 ? "s" : ""} that need to be addressed:
 
 ${items
-  .map((item: any, index: number) => {
+  .map((item: Item, index: number) => {
     const productsList = item.products
-      .map((product: any) => {
-        let productNote = product.note ? ` - ${product.note}` : "";
+      .map((product: Product) => {
+        const productNote = product.note ? ` - ${product.note}` : "";
         return `   • ${product.productName}${productNote}`;
       })
       .join("\n");

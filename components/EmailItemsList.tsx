@@ -38,7 +38,7 @@ export default function EmailItemsList({
         </div>
         <p className="text-sm text-gray-600">
           Add items from the panel to include them in your email. Once the email
-          is generated, you can edit it before it's sent.
+          is generated, you can edit it before it&apos;s sent.
         </p>
       </div>
 

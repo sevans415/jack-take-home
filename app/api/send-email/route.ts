@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
+interface Recipient {
+  name: string;
+  email: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { recipients, emailBody, subject } = body;
+    const { recipients, emailBody } = body;
 
     // Validate required fields
     if (!recipients || recipients.length === 0) {
@@ -38,7 +43,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "Email sent successfully",
       sentAt: new Date().toISOString(),
-      recipients: recipients.map((r: any) => r.email),
+      recipients: recipients.map((r: Recipient) => r.email),
     });
   } catch (error) {
     console.error("Error sending email:", error);

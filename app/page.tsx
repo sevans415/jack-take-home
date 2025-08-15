@@ -1,19 +1,11 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
-import {
-  manufacturersArticle,
-  windDrivenRainArticle,
-  standardBladeArticle,
-  materialsArticle,
-  allArticles,
-  mockOverallData,
-} from "../data/mockData";
+import { allArticles, mockOverallData } from "../data/mockData";
 import { UserDisposition } from "../types";
 import Article from "@/components/Article";
 import EmailDrawer from "@/components/EmailDrawer";
 import { Mail } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 type StatusCounts = {
@@ -67,8 +59,8 @@ export default function Home() {
   const globalCounts = useMemo(() => computeGlobalCounts(), []);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Calculate total issues for badge
-  const totalIssues = useMemo(() => {
+  // Calculate total issues for badge - removed unused variable
+  useMemo(() => {
     let count = 0;
     allArticles.forEach((article) => {
       article.requirements.forEach((req) => {

@@ -332,8 +332,6 @@ export default function EmailDrawer({ isOpen, onClose }: EmailDrawerProps) {
                       <div className="w-80 h-full relative">
                         <div className="h-full w-full sticky top-0">
                           <AddItemsPanel
-                            isOpen={true}
-                            onClose={() => {}}
                             onAddItem={handleAddItem}
                             addedItems={emailItems}
                           />
