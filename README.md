@@ -16,6 +16,24 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Environment Setup
+
+This project uses the Anthropic API to generate contextual emails for submittal reviews. To enable this functionality:
+
+1. Create a `.env.local` file in the project root
+2. Add the following environment variables:
+
+```env
+# Anthropic API Configuration
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+```
+
+3. Replace `your_anthropic_api_key_here` with your actual Anthropic API key
+4. Optionally, you can change the model to any available Anthropic model (e.g., `claude-3-opus-20240229`, `claude-3-haiku-20240307`)
+
+The email generation will use these credentials to create contextual emails based on submittal review data. If the API key is not configured, the system will fall back to a basic template.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

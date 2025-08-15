@@ -10,13 +10,15 @@ interface ArticleProps {
   productCount: number;
   reviewed: number;
   total: number;
+  onOpenEmailDrawer?: () => void;
 }
 
 export default function Article({
   article,
   productCount,
   reviewed,
-  total
+  total,
+  onOpenEmailDrawer,
 }: ArticleProps) {
   const [open, setOpen] = useState(false);
 
@@ -25,8 +27,8 @@ export default function Article({
     let unclearCount = 0;
     let notCompliantCount = 0;
 
-    article.requirements.forEach(req => {
-      req.productReviews.forEach(review => {
+    article.requirements.forEach((req) => {
+      req.productReviews.forEach((review) => {
         switch (review.bixbyReview.status) {
           case BixbyPOVDisposition.UNCLEAR:
             unclearCount++;
@@ -46,7 +48,7 @@ export default function Article({
 
   return (
     <div className="bg-white border border-black/4 rounded-xl shadow-sm mb-2">
-      <div className="p-3 cursor-pointer" onClick={() => setOpen(p => !p)}>
+      <div className="p-3 cursor-pointer" onClick={() => setOpen((p) => !p)}>
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <div className="flex flex-col gap-0.5">
@@ -107,7 +109,12 @@ export default function Article({
         <div className="border-t border-black/8 px-3 py-2">
           <div className="space-y-1">
             {article.requirements.map((r, i) => (
-              <ReviewRow key={i} requirement={r} />
+              <ReviewRow
+                key={i}
+                requirement={r}
+                article={article}
+                onOpenEmailDrawer={onOpenEmailDrawer}
+              />
             ))}
           </div>
         </div>
