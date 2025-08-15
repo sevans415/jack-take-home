@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   manufacturersArticle,
   windDrivenRainArticle,
@@ -87,6 +87,33 @@ export default function Home() {
     return count;
   }, []);
 
+  // Handle escape key to close drawer
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      // Check if escape key was pressed
+      if (event.key === "Escape") {
+        // Check if any input or textarea is currently focused (editing)
+        const activeElement = document.activeElement;
+        const isEditing =
+          activeElement?.tagName === "TEXTAREA" ||
+          activeElement?.tagName === "INPUT";
+
+        // Only close drawer if it's open and not editing
+        if (isDrawerOpen && !isEditing) {
+          setIsDrawerOpen(false);
+        }
+      }
+    };
+
+    // Add event listener
+    document.addEventListener("keydown", handleEscapeKey);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("keydown", handleEscapeKey);
+    };
+  }, [isDrawerOpen]);
+
   // Fixed drawer width since items panel is always visible
   const drawerWidth = 800;
 
@@ -111,35 +138,58 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-gray-900">
                 {mockOverallData.projectTitle}
               </h1>
-              {/* Review Progress moved here */}
-              <div className="bg-blue-50 rounded-xl px-3 py-2 shadow-sm border border-black/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-64">
-                    <div className="flex justify-between items-center mb-2.5">
-                      <span className="text-[13px] font-semibold text-black leading-[18px] tracking-[-0.08px]">
-                        Review Progress
-                      </span>
-                      <span className="text-[11px] font-semibold text-black/70 leading-[13px] tracking-[0.07px]">
-                        {globalCounts.totalDispositioned}/{globalCounts.total}
-                      </span>
+
+              <div className="flex items-center gap-3">
+                {/* Review Progress */}
+                <div className="bg-blue-50 rounded-xl px-3 py-2 shadow-sm border border-black/5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-64">
+                      <div className="flex justify-between items-center mb-2.5">
+                        <span className="text-[13px] font-semibold text-black leading-[18px] tracking-[-0.08px]">
+                          Review Progress
+                        </span>
+                        <span className="text-[11px] font-semibold text-black/70 leading-[13px] tracking-[0.07px]">
+                          {globalCounts.totalDispositioned}/{globalCounts.total}
+                        </span>
+                      </div>
+                      <div className="w-64 bg-black/8 rounded-lg h-2">
+                        <div
+                          className="bg-blue-500 h-2 rounded-2xl shadow-inner"
+                          style={{
+                            width: `${
+                              (globalCounts.totalDispositioned /
+                                globalCounts.total) *
+                              100
+                            }%`,
+                          }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="w-64 bg-black/8 rounded-lg h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-2xl shadow-inner"
-                        style={{
-                          width: `${
-                            (globalCounts.totalDispositioned /
-                              globalCounts.total) *
-                            100
-                          }%`,
-                        }}
-                      ></div>
-                    </div>
+                    <button className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-[13px] leading-[18px] tracking-[-0.08px] transition-colors duration-200 whitespace-nowrap">
+                      Resume
+                    </button>
                   </div>
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-[13px] leading-[18px] tracking-[-0.08px] transition-colors duration-200 whitespace-nowrap">
-                    Resume
-                  </button>
                 </div>
+
+                {/* Email Button with smooth hide animation */}
+                <AnimatePresence mode="popLayout">
+                  {!isDrawerOpen && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{
+                        duration: 0.2,
+                        ease: "easeInOut",
+                      }}
+                      onClick={() => setIsDrawerOpen(true)}
+                      className="bg-white hover:bg-gray-50 text-gray-700 font-semibold px-4 py-2.5 rounded-xl cursor-pointer text-[13px] leading-[18px] tracking-[-0.08px] transition-all duration-200 whitespace-nowrap flex items-center gap-2 border border-gray-200 shadow-xs h-14"
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span>Compose AI Email</span>
+                    </motion.button>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
@@ -278,27 +328,12 @@ export default function Home() {
                   productCount={productCount}
                   reviewed={reviewedCount}
                   total={totalReviews}
+                  onOpenEmailDrawer={() => setIsDrawerOpen(true)}
                 />
               );
             })}
           </div>
         </div>
-
-        {/* Floating Action Button */}
-        <button
-          onClick={() => setIsDrawerOpen(true)}
-          className="fixed bottom-6 right-6 bg-blue-500 text-white rounded-xl px-4 py-3 shadow-lg hover:bg-blue-600 flex items-center gap-2 transition-colors border border-black/4"
-        >
-          <Mail className="w-5 h-5" />
-          <span className="text-[13px] font-semibold leading-[18px] tracking-[-0.08px]">
-            Compose AI Email
-          </span>
-          {totalIssues > 0 && (
-            <span className="bg-red-500 text-white rounded-full px-2 py-0.5 text-[11px] font-bold ml-1">
-              {totalIssues}
-            </span>
-          )}
-        </button>
       </motion.div>
 
       {/* Email Composer Sidebar - Fixed position with animation */}

@@ -8,8 +8,11 @@ import { EmailItem } from "./AddItemsPanel";
 
 interface EmailItemsListProps {
   emailItems: EmailItem[];
-  itemNotes: Map<string, string>;
-  onNoteChange: (itemId: string, note: string) => void;
+  onProductNoteChange: (
+    itemId: string,
+    productReviewId: string,
+    note: string
+  ) => void;
   onRemoveItem: (itemId: string) => void;
   onGenerateEmail: () => void;
   isGenerating: boolean;
@@ -17,8 +20,7 @@ interface EmailItemsListProps {
 
 export default function EmailItemsList({
   emailItems,
-  itemNotes,
-  onNoteChange,
+  onProductNoteChange,
   onRemoveItem,
   onGenerateEmail,
   isGenerating,
@@ -35,8 +37,8 @@ export default function EmailItemsList({
           </span>
         </div>
         <p className="text-sm text-gray-600">
-          Add items from the panel to include them in your email. You can add
-          notes to provide context.
+          Add items from the panel to include them in your email. Once the email
+          is generated, you can edit it before it's sent.
         </p>
       </div>
 
@@ -47,8 +49,9 @@ export default function EmailItemsList({
               <EmailItemCard
                 key={item.id}
                 item={item}
-                note={itemNotes.get(item.id) || ""}
-                onNoteChange={(note) => onNoteChange(item.id, note)}
+                onProductNoteChange={(productReviewId, note) =>
+                  onProductNoteChange(item.id, productReviewId, note)
+                }
                 onRemove={() => onRemoveItem(item.id)}
                 isDisabled={isGenerating}
               />

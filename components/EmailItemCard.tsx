@@ -1,9 +1,8 @@
 "use client";
 
-import React from "react";
-import { X, AlertCircle, Bookmark, Clock } from "lucide-react";
+import React, { useState } from "react";
+import { X, Bookmark, Clock, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { capitalizeStatus } from "@/lib/emailUtils";
 import { EmailItem } from "./AddItemsPanel";
 import { UserDisposition, BixbyPOVDisposition } from "@/types";
 import {
@@ -14,19 +13,46 @@ import {
 
 interface EmailItemCardProps {
   item: EmailItem;
-  note: string;
-  onNoteChange: (note: string) => void;
+  onProductNoteChange: (productReviewId: string, note: string) => void;
   onRemove: () => void;
   isDisabled?: boolean;
 }
 
 export default function EmailItemCard({
   item,
-  note,
-  onNoteChange,
+  onProductNoteChange,
   onRemove,
   isDisabled = false,
 }: EmailItemCardProps) {
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [hoveredProductId, setHoveredProductId] = useState<string | null>(null);
+  const [tempNote, setTempNote] = useState<string>("");
+
+  const handleEditClick = (productReviewId: string, currentNote: string) => {
+    setEditingProductId(productReviewId);
+    setTempNote(currentNote || "");
+  };
+
+  const handleSaveNote = (productReviewId: string) => {
+    onProductNoteChange(productReviewId, tempNote);
+    setEditingProductId(null);
+    setTempNote("");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProductId(null);
+    setTempNote("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, productReviewId: string) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSaveNote(productReviewId);
+    } else if (e.key === "Escape") {
+      handleCancelEdit();
+    }
+  };
+
   return (
     <div className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
@@ -46,9 +72,14 @@ export default function EmailItemCard({
             <p className="text-xs font-medium text-gray-600 mb-1">
               Affected Products:
             </p>
-            <div className="space-y-1.5 ">
+            <div className="space-y-1.5">
               {item.products.map((product) => (
-                <div key={product.reviewId} className="flex items-start gap-2">
+                <div
+                  key={product.reviewId}
+                  className="flex items-start gap-2"
+                  onMouseEnter={() => setHoveredProductId(product.reviewId)}
+                  onMouseLeave={() => setHoveredProductId(null)}
+                >
                   <div className="flex items-center gap-1 mt-0.5">
                     {product.userStatus === UserDisposition.BOOKMARKED && (
                       <Tooltip>
@@ -87,10 +118,49 @@ export default function EmailItemCard({
                     <p className="text-xs text-gray-700">
                       {product.productName}
                     </p>
-                    {product.note && (
-                      <p className="text-xs text-blue-600 italic mt-0.5">
-                        {product.note}
-                      </p>
+                    {editingProductId === product.reviewId ? (
+                      <div className="mt-1">
+                        <textarea
+                          value={tempNote}
+                          onChange={(e) => setTempNote(e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, product.reviewId)}
+                          onBlur={() => handleSaveNote(product.reviewId)}
+                          placeholder="Add a note..."
+                          className="w-full px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:border-blue-500 resize-none bg-white"
+                          rows={2}
+                          autoFocus
+                          disabled={isDisabled}
+                        />
+                        <div className="text-[10px] text-gray-500 mt-1">
+                          Press Enter to save, Esc to cancel
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-1 group">
+                        {product.note ? (
+                          <p className="text-xs text-blue-600 italic mt-0.5 flex-1">
+                            {product.note}
+                          </p>
+                        ) : (
+                          hoveredProductId === product.reviewId && (
+                            <p className="text-xs text-gray-400 italic mt-0.5 flex-1">
+                              Add a note...
+                            </p>
+                          )
+                        )}
+                        {hoveredProductId === product.reviewId &&
+                          !isDisabled && (
+                            <button
+                              onClick={() =>
+                                handleEditClick(product.reviewId, product.note)
+                              }
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 cursor-pointer hover:bg-gray-100 rounded-sm"
+                              title="Edit note"
+                            >
+                              <Pencil className="h-3 w-3 text-gray-500" />
+                            </button>
+                          )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -105,19 +175,6 @@ export default function EmailItemCard({
         >
           <X className="h-4 w-4" />
         </button>
-      </div>
-      <div className="mt-3 pt-3 border-t border-gray-100">
-        <label className="text-xs font-medium text-gray-700 block mb-1">
-          Additional Notes (optional)
-        </label>
-        <textarea
-          value={note}
-          onChange={(e) => onNoteChange(e.target.value)}
-          disabled={isDisabled}
-          placeholder="Add context or questions about this requirement..."
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg resize-none focus:outline-none focus:border-blue-500 disabled:opacity-50 bg-gray-50 focus:bg-white transition-colors"
-          rows={2}
-        />
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ interface ArticleProps {
   productCount: number;
   reviewed: number;
   total: number;
+  onOpenEmailDrawer?: () => void;
 }
 
 export default function Article({
@@ -17,6 +18,7 @@ export default function Article({
   productCount,
   reviewed,
   total,
+  onOpenEmailDrawer,
 }: ArticleProps) {
   const [open, setOpen] = useState(false);
 
@@ -107,7 +109,12 @@ export default function Article({
         <div className="border-t border-black/8 px-3 py-2">
           <div className="space-y-1">
             {article.requirements.map((r, i) => (
-              <ReviewRow key={i} requirement={r} />
+              <ReviewRow
+                key={i}
+                requirement={r}
+                article={article}
+                onOpenEmailDrawer={onOpenEmailDrawer}
+              />
             ))}
           </div>
         </div>

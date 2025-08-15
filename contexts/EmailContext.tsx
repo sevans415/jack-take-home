@@ -17,10 +17,6 @@ interface EmailContextType {
   emailItems: EmailItem[];
   setEmailItems: (items: EmailItem[]) => void;
 
-  // Item notes
-  itemNotes: Map<string, string>;
-  setItemNotes: (notes: Map<string, string>) => void;
-
   // Generated email
   generatedEmail: string;
   setGeneratedEmail: (email: string) => void;
@@ -36,14 +32,12 @@ const EmailContext = createContext<EmailContextType | undefined>(undefined);
 export function EmailProvider({ children }: { children: ReactNode }) {
   const [recipients, setRecipients] = useState<EmailRecipient[]>([]);
   const [emailItems, setEmailItems] = useState<EmailItem[]>([]);
-  const [itemNotes, setItemNotes] = useState<Map<string, string>>(new Map());
   const [generatedEmail, setGeneratedEmail] = useState("");
   const [emailGenerated, setEmailGenerated] = useState(false);
 
   const resetEmailState = () => {
     setRecipients([]);
     setEmailItems([]);
-    setItemNotes(new Map());
     setGeneratedEmail("");
     setEmailGenerated(false);
   };
@@ -55,8 +49,6 @@ export function EmailProvider({ children }: { children: ReactNode }) {
         setRecipients,
         emailItems,
         setEmailItems,
-        itemNotes,
-        setItemNotes,
         generatedEmail,
         setGeneratedEmail,
         emailGenerated,

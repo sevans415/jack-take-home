@@ -29,8 +29,6 @@ export default function EmailDrawer({ isOpen, onClose }: EmailDrawerProps) {
     setRecipients,
     emailItems,
     setEmailItems,
-    itemNotes,
-    setItemNotes,
     generatedEmail,
     setGeneratedEmail,
     emailGenerated,
@@ -58,21 +56,33 @@ export default function EmailDrawer({ isOpen, onClose }: EmailDrawerProps) {
 
   const handleAddItem = (item: EmailItem) => {
     setEmailItems([...emailItems, item]);
-    // Notes are now managed at the requirement level through the UI
-    // Individual product notes are preserved within item.products
   };
 
   const handleRemoveItem = (itemId: string) => {
     setEmailItems(emailItems.filter((item) => item.id !== itemId));
-    const newNotes = new Map(itemNotes);
-    newNotes.delete(itemId);
-    setItemNotes(newNotes);
   };
 
-  const handleNoteChange = (itemId: string, note: string) => {
-    const newNotes = new Map(itemNotes);
-    newNotes.set(itemId, note);
-    setItemNotes(newNotes);
+  const handleProductNoteChange = (
+    itemId: string,
+    productReviewId: string,
+    note: string
+  ) => {
+    setEmailItems(
+      emailItems.map((item) => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            products: item.products.map((product) => {
+              if (product.reviewId === productReviewId) {
+                return { ...product, note };
+              }
+              return product;
+            }),
+          };
+        }
+        return item;
+      })
+    );
   };
 
   const handleGenerateEmail = async () => {
@@ -80,11 +90,6 @@ export default function EmailDrawer({ isOpen, onClose }: EmailDrawerProps) {
 
     setIsGenerating(true);
     try {
-      const itemsWithNotes = emailItems.map((item) => ({
-        ...item,
-        note: itemNotes.get(item.id) || "",
-      }));
-
       const response = await fetch("/api/generate-email", {
         method: "POST",
         headers: {
@@ -92,7 +97,7 @@ export default function EmailDrawer({ isOpen, onClose }: EmailDrawerProps) {
         },
         body: JSON.stringify({
           recipients,
-          items: itemsWithNotes,
+          items: emailItems, // Now the notes are already in the products
         }),
       });
 
@@ -265,6 +270,7 @@ export default function EmailDrawer({ isOpen, onClose }: EmailDrawerProps) {
             <RecipientField
               recipients={recipients}
               onRecipientsChange={setRecipients}
+              autoFocus={isOpen}
             />
           </div>
 
@@ -317,8 +323,7 @@ export default function EmailDrawer({ isOpen, onClose }: EmailDrawerProps) {
                     >
                       <EmailItemsList
                         emailItems={emailItems}
-                        itemNotes={itemNotes}
-                        onNoteChange={handleNoteChange}
+                        onProductNoteChange={handleProductNoteChange}
                         onRemoveItem={handleRemoveItem}
                         onGenerateEmail={handleGenerateEmail}
                         isGenerating={isGenerating}

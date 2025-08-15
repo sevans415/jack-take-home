@@ -13,11 +13,13 @@ import {
 interface RecipientFieldProps {
   recipients: EmailRecipient[];
   onRecipientsChange: (recipients: EmailRecipient[]) => void;
+  autoFocus?: boolean;
 }
 
 export default function RecipientField({
   recipients,
   onRecipientsChange,
+  autoFocus = false,
 }: RecipientFieldProps) {
   const [inputValue, setInputValue] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -26,6 +28,16 @@ export default function RecipientField({
   );
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Auto-focus when autoFocus is true and recipients are empty
+  useEffect(() => {
+    if (autoFocus && recipients.length === 0 && inputRef.current) {
+      // Small delay to ensure drawer animation has started
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [autoFocus, recipients.length]);
 
   // Filter contacts based on input
   useEffect(() => {

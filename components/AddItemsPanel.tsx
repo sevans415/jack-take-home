@@ -152,8 +152,7 @@ export default function AddItemsPanel({
         }
         if (
           activeFilters.has("non-compliant") &&
-          (product.userStatus === UserDisposition.NOT_COMPLIANT ||
-            product.status === BixbyPOVDisposition.NOT_COMPLIANT)
+          product.userStatus === UserDisposition.NOT_COMPLIANT
         ) {
           return true;
         }
@@ -249,27 +248,30 @@ export default function AddItemsPanel({
     }
   };
 
-  // Get counts for each filter
+  // Get counts for each filter (counting items, not products)
   const filterCounts = useMemo(() => {
     let bookmarked = 0;
     let nonCompliant = 0;
     let notReviewed = 0;
 
     allItems.forEach((item) => {
-      item.products.forEach((product) => {
-        if (product.userStatus === UserDisposition.BOOKMARKED) {
-          bookmarked++;
-        }
-        if (
-          product.userStatus === UserDisposition.NOT_COMPLIANT ||
-          product.status === BixbyPOVDisposition.NOT_COMPLIANT
-        ) {
-          nonCompliant++;
-        }
-        if (product.userStatus === null) {
-          notReviewed++;
-        }
-      });
+      // Check if this item has any bookmarked products
+      const hasBookmarked = item.products.some(
+        (product) => product.userStatus === UserDisposition.BOOKMARKED
+      );
+      if (hasBookmarked) bookmarked++;
+
+      // Check if this item has any non-compliant products (user marked)
+      const hasNonCompliant = item.products.some(
+        (product) => product.userStatus === UserDisposition.NOT_COMPLIANT
+      );
+      if (hasNonCompliant) nonCompliant++;
+
+      // Check if this item has any not-reviewed products
+      const hasNotReviewed = item.products.some(
+        (product) => product.userStatus === null
+      );
+      if (hasNotReviewed) notReviewed++;
     });
 
     return {
@@ -360,7 +362,7 @@ export default function AddItemsPanel({
                     onClick={() => toggleFilter(option.value)}
                     className={cn(
                       "w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center justify-between",
-                      isSelected && "bg-blue-50"
+                      isSelected && ""
                     )}
                   >
                     <span className="flex items-center gap-2">
@@ -369,11 +371,7 @@ export default function AddItemsPanel({
                           {option.icon}
                         </span>
                       )}
-                      <span
-                        className={cn(
-                          isSelected ? " font-medium" : "text-gray-800"
-                        )}
-                      >
+                      <span className={cn(isSelected ? "" : "text-gray-800")}>
                         {option.label}
                       </span>
                     </span>
@@ -560,7 +558,7 @@ export default function AddItemsPanel({
                                   "flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all flex-shrink-0 text-xs font-medium border",
                                   added
                                     ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
-                                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                                    : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
                                 )}
                               >
                                 {added ? (
